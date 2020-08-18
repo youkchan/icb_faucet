@@ -4,17 +4,13 @@ orbs:
 
 jobs:
   build:
-    working_directory: ~/workspace
     docker:
       - image: circleci/golang:1.12
 
     steps:
-      - attach_workspace:
-          at: .
       - run: go build ./cmd/icb_faucet/main.go
 
   deploy-develop:
-    working_directory: ~/workspace
     docker:
       - image: google/cloud-sdk:latest
 
