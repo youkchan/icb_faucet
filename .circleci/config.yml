@@ -20,7 +20,7 @@ workflows:
   version: 2
   deploy:
     jobs:
-      - deploy-develop:
+      - deploy-develop
         #- build
           #  requires:
           #  - build
