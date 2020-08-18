@@ -14,7 +14,7 @@ jobs:
       - run:
           name: Deploy to Google App Engine
           command: |
-            gcloud app --quiet deploy app.yaml
+            gcloud app --quiet deploy ./app.yaml --project=$GOOGLE_PROJECT_ID
 
 workflows:
   version: 2
