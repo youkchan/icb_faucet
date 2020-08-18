@@ -9,6 +9,8 @@ jobs:
       - image: google/cloud-sdk:latest
 
     steps:
+      - attach_workspace:
+          at: .
       - checkout
       - gcp-cli/initialize
       - run:
