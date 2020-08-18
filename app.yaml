@@ -1,0 +1,3 @@
+runtime: go113
+
+main: ./cmd/icb_faucet
