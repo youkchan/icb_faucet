@@ -1,0 +1,35 @@
+version: 2.1
+orbs:
+  gcp-cli: circleci/gcp-cli@1.8.4
+
+jobs:
+  build:
+    working_directory: ~/workspace
+    docker:
+      - image: circleci/golang:1.12
+
+    steps:
+      - attach_workspace:
+          at: .
+      - run: go build ./cmd/icb_faucet/main.go
+
+  deploy-develop:
+    working_directory: ~/workspace
+    docker:
+      - image: google/cloud-sdk:latest
+
+    steps:
+      - gcp-cli/initialize
+      - run:
+          name: Deploy to Google App Engine
+          command: |
+            gcloud app --quiet deploy app.yaml
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build
+      - deploy-develop:
+          requires:
+            - build
