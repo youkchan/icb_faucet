@@ -2,8 +2,6 @@ runtime: go113
 
 main: ./cmd/icb_faucet
 
-threadsafe: true
-
 automatic_scaling:
   min_idle_instances: automatic   # idle状態にあるインスタンスの最小値
   max_idle_instances: 1                 # idle状態にあるインスタンスの最大値
