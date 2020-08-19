@@ -37,7 +37,8 @@ func main() {
 }
 
 func Env_load() {
-    err := godotenv.Load("../../.env")
+    //err := godotenv.Load("../../.env")
+    err := godotenv.Load()
     if err != nil {
         log.Fatal("Error loading .env file")
     }
@@ -85,6 +86,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
     if err != nil {
       log.Fatal(err)
     }
+    fmt.Println(bal)
 
     privateKey, err := crypto.HexToECDSA(os.Getenv("PRIVATE_KEY"))
     if err != nil {
@@ -160,17 +162,11 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
     fmt.Printf("Signed tx sent: %s", signedTx.Hash().Hex())
 
-
-
-
-
-
-
-
-
     //fmt.Printf("wei: %s\n", bal) // "wei: 74605500647408739782407023"
     //fmt.Fprint(w, "token balance : " + bal.String())
+    fmt.Fprint(w, signedTx.Hash().Hex())
     //fmt.Fprint(w, "ether balance : " + balance.String())
-    t, _ := template.ParseFiles("../../web/html/index.html")
-    t.Execute(w, "token balance : " + bal.String() + "ether balance : " + balance.String())
+    //t, _ := template.ParseFiles("../../web/html/index.html")
+    //t.Execute(w, "token balance : " + bal.String() + "ether balance : " + balance.String())
+    //t.Execute(w, "token balance : ")
 }
