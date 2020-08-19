@@ -51,13 +51,14 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
     if err != nil {
         log.Fatal(err)
     }
-    fmt.Println(balance)
+    //fmt.Println(balance)
 
     bal, err := rinkebyICBInstance.BalanceOf(&bind.CallOpts{}, account)
     if err != nil {
       log.Fatal(err)
     }
     
-    fmt.Printf("wei: %s\n", bal) // "wei: 74605500647408739782407023"
-    //fmt.Fprint(w, "Hello, World!gae")
+    //fmt.Printf("wei: %s\n", bal) // "wei: 74605500647408739782407023"
+    fmt.Fprint(w, "token balance : " + bal.String())
+    fmt.Fprint(w, "ether balance : " + balance.String())
 }
