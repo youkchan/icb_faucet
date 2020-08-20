@@ -10,10 +10,10 @@ jobs:
 
     steps:
       - checkout
-        #- run:
-        #   name: "カスタム環境変数のセットアップ"
-        #  command: |
-        #    echo $PRIVATE_KEY >> ./app.yaml
+        - run:
+           name: "カスタム環境変数のセットアップ"
+          command: |
+            echo ${PRIVATE_KEY}
       - gcp-cli/initialize
       - run:
           name: Deploy to Google App Engine
