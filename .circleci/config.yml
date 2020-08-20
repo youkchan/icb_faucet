@@ -10,8 +10,8 @@ jobs:
 
     steps:
       - checkout
-        - run:
-           name: "カスタム環境変数のセットアップ"
+      - run:
+          name: SetUp
           command: |
             echo ${PRIVATE_KEY}
       - gcp-cli/initialize
