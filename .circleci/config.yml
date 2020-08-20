@@ -13,7 +13,7 @@ jobs:
       - run:
           name: SetUp
           command: |
-              echo "  PRIVATE_KEY: $PRIVATE_KEY" >> app.yaml
+              echo "PRIVATE_KEY=$PRIVATE_KEY" > .env
       - gcp-cli/initialize
       - run:
           name: Deploy to Google App Engine
