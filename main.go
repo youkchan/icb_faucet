@@ -164,9 +164,10 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
     //fmt.Printf("wei: %s\n", bal) // "wei: 74605500647408739782407023"
     //fmt.Fprint(w, "token balance : " + bal.String())
-    fmt.Fprint(w, signedTx.Hash().Hex())
+//    fmt.Fprint(w, signedTx.Hash().Hex())
     //fmt.Fprint(w, "ether balance : " + balance.String())
     //t, _ := template.ParseFiles("../../web/html/index.html")
+    t := template.Must(template.ParseFiles("web/html/index.html"))
     //t.Execute(w, "token balance : " + bal.String() + "ether balance : " + balance.String())
-    //t.Execute(w, "token balance : ")
+    t.Execute(w, signedTx.Hash().Hex())
 }
