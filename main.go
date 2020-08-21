@@ -5,6 +5,7 @@ import (
 //    "context"
     "log"
     "net/http"
+    "net"
     "os"
     "strconv"
     "html/template"
@@ -135,7 +136,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     fmt.Println(r.RemoteAddr)
-
+    ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+    fmt.Println(ip)
 /*    network_list := []ethereum.Network{
         *ethereum.NewNetwork(4, os.Getenv("INFURA_RINKEBY")),
         *ethereum.NewNetwork(3, os.Getenv("INFURA_ROPSTEN")),
