@@ -1,7 +1,7 @@
 package main
 
 import (
-//    "fmt"
+    "fmt"
 //    "context"
     "log"
     "net/http"
@@ -133,6 +133,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
             http.NotFound(w, r)
             return
     }
+
+    fmt.Println(r.RemoteAddr)
 
 /*    network_list := []ethereum.Network{
         *ethereum.NewNetwork(4, os.Getenv("INFURA_RINKEBY")),
