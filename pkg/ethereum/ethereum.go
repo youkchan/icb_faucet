@@ -75,16 +75,16 @@ type Account struct{
     Address common.Address
 }
 
-func NewAccount(address string) (*Account) {
+func NewAccount(address string) (*Account, error) {
     if !addressCheck(address) {
-        log.Fatal("Invalid Address")
+        return nil, errors.New("Invalid Address")
     }
 
     commonAddress := common.HexToAddress(address)
     account := Account {
         Address: commonAddress,
     }
-    return &account
+    return &account, nil
 }
 
 func (n* Network) getName() (string, error) {

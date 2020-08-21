@@ -15,9 +15,9 @@
     </div>
     <div class="container">
       <form action="/send" method="post">
-        {{ if eq .IsInvalidParam true }}
+        {{ if ne .InvalidMessage "" }}
           <div class="alert alert-danger" role="alert">
-            Invalid Parameter
+            {{ .InvalidMessage }}
           </div>
         {{ end }}
         {{ if ne .TxHash "" }}
