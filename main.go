@@ -157,7 +157,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 */
     params := Params {
         InvalidMessage : "",
-        TxHash : "",
+        //TxHash : "",
+        TxHash : r.RemoteAddr,
     }
     t.Execute(w, params)
 }
