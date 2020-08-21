@@ -1,4 +1,4 @@
-runtime: go111
+runtime: go113
 
 automatic_scaling:
   min_idle_instances: automatic   # idle状態にあるインスタンスの最小値
