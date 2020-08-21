@@ -2,25 +2,32 @@ package main
 
 import (
     "fmt"
-    "context"
+//    "context"
     "log"
     "net/http"
     "os"
+    "strconv"
     "html/template"
-    "crypto/ecdsa"
-    "math/big"
+//    "crypto/ecdsa"
+//    "math/big"
     "github.com/joho/godotenv"
 //    "github.com/ethereum/go-ethereum/accounts/abi/bind"
-    "github.com/ethereum/go-ethereum/common"
+//    "github.com/ethereum/go-ethereum/common"
 //    "github.com/ethereum/go-ethereum/ethclient"
 //    token "github.com/youkchan/icb_faucet/pkg/token"
-    "github.com/ethereum/go-ethereum/crypto"
+//    "github.com/ethereum/go-ethereum/crypto"
 //    "github.com/ethereum/go-ethereum/common/hexutil"
-    "github.com/ethereum/go-ethereum/core/types"
-    "golang.org/x/crypto/sha3"
+//    "github.com/ethereum/go-ethereum/core/types"
+//    "golang.org/x/crypto/sha3"
     ethereum "github.com/youkchan/icb_faucet/pkg/ethereum"
 //    "reflect"
 )
+
+type Params struct{
+    IsInvalidParam bool
+    TxHash string
+}
+
 
 func main() {
     http.Handle("/web/css/", http.StripPrefix("/web/css/", http.FileServer(http.Dir("web/css/"))))
@@ -46,33 +53,6 @@ func Env_load() {
     }
 }
 
-type Faucet struct{
-    privateKey *ecdsa.PrivateKey
-    address common.Address
-}
-
-func NewFaucet(str_privatekey string) (*Faucet) {
-
-    privateKey, err := crypto.HexToECDSA(str_privatekey)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    publicKey := privateKey.Public()
-    publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-    if !ok {
-        log.Fatal("error casting public key to ECDSA")
-    }
-
-    address := crypto.PubkeyToAddress(*publicKeyECDSA)
-    faucet := Faucet {
-        privateKey: privateKey,
-        address: address,
-    }
-    return &faucet
-
-}
-
 func sendHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
     if err != nil {
@@ -80,10 +60,39 @@ func sendHandler(w http.ResponseWriter, r *http.Request) {
     }
 
 	address := r.PostFormValue("address")
-    fmt.Println("send")
+	amount, _ := strconv.Atoi(r.PostFormValue("amount"))
+	network, _ := strconv.Atoi(r.PostFormValue("network"))
+
+    network_list := []ethereum.Network{
+        *ethereum.NewNetwork(4, os.Getenv("INFURA_RINKEBY")),
+        *ethereum.NewNetwork(3, os.Getenv("INFURA_ROPSTEN")),
+    }
+    client_factory := ethereum.NewClientFactory(network_list)
+    //fmt.Println(client_factory)
+    ethereum_client, err := client_factory.CreateClient(network)
+    //fmt.Println(ethereum_client)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    var token *ethereum.Token
+    if ethereum_client.Network.Id == 4 {
+        token = ethereum.NewToken(os.Getenv("TOKEN_RINKEBY_ADDRESS"))
+    } else if ethereum_client.Network.Id == 3 {
+        token = ethereum.NewToken(os.Getenv("TOKEN_ROPSTEN_ADDRESS"))
+    }
+
+    faucet_account := ethereum.NewSendableAccount(os.Getenv("PRIVATE_KEY")) 
+    account := ethereum.NewAccount(address)
+    txhash := ethereum_client.SendToken(*token, *faucet_account, *account, amount * 10000)
 
     t := template.Must(template.ParseFiles("web/html/index.html"))
-    t.Execute(w, "send to " + address)
+    params := Params {
+        IsInvalidParam : false,
+        TxHash : txhash,
+    }
+
+    t.Execute(w, params)
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -118,7 +127,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
     fmt.Println(client)
     fmt.Println(reflect.TypeOf(client_.Ethclient))
     fmt.Println(client_.Ethclient)*/
-    client := ethereum_client.Ethclient
+    //client := ethereum_client.Ethclient
     var token *ethereum.Token
     if ethereum_client.Network.Id == 4 {
         token = ethereum.NewToken(os.Getenv("TOKEN_RINKEBY_ADDRESS"))
@@ -149,8 +158,17 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
     fmt.Println(bal)*/
 
 
-    faucet := NewFaucet(os.Getenv("PRIVATE_KEY")) 
-    fmt.Println(faucet)
+    /*faucet := NewFaucet(os.Getenv("PRIVATE_KEY")) 
+    fmt.Println(faucet)*/
+
+    faucet_account := ethereum.NewSendableAccount(os.Getenv("PRIVATE_KEY")) 
+    fmt.Println(faucet_account)
+    account := ethereum.NewAccount("0xE202B444Db397F53AE05149fE2843D7841A2dCBE") 
+    fmt.Println(account)
+    txhash := ethereum_client.SendToken(*token, *faucet_account, *account, 300000)
+    fmt.Println(txhash)
+
+
 
     /*privateKey, err := crypto.HexToECDSA(os.Getenv("PRIVATE_KEY"))
     if err != nil {
@@ -174,7 +192,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 */
     //Ropstenネットワークから、Nonce情報を読み取る
     //nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
-    nonce, err := client.PendingNonceAt(context.Background(), faucet.address)
+/*    nonce, err := client.PendingNonceAt(context.Background(), faucet.address)
     if err != nil {
         log.Fatal(err)
     }
@@ -214,7 +232,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
     data = append(data, paddedAddress...)
     data = append(data, paddedAmount...)
 
-    /***** Preparing signed transaction *****/
     tx := types.NewTransaction(nonce, tokenAddress, value, gasLimit, gasPrice, data)
     //signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, privateKey)
     signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, faucet.privateKey)
@@ -229,7 +246,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     fmt.Printf("Signed tx sent: %s", signedTx.Hash().Hex())
-
+*/
     //fmt.Printf("wei: %s\n", bal) // "wei: 74605500647408739782407023"
     //fmt.Fprint(w, "token balance : " + bal.String())
 //    fmt.Fprint(w, signedTx.Hash().Hex())
@@ -238,5 +255,9 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
     t := template.Must(template.ParseFiles("web/html/index.html"))
     //t.Execute(w, "token balance : " + bal.String() + "ether balance : " + balance.String())
     //t.Execute(w, signedTx.Hash().Hex())
-    t.Execute(w, "Invalid Ethreum Address")
+    params := Params {
+        IsInvalidParam : false,
+        TxHash : "",
+    }
+    t.Execute(w, params)
 }

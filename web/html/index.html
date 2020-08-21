@@ -15,12 +15,20 @@
     </div>
     <div class="container">
       <form action="/send" method="post">
-        <div class="alert alert-danger" role="alert">
-          {{ . }}
-        </div>
+        {{ if eq .IsInvalidParam true }}
+          <div class="alert alert-danger" role="alert">
+            Invalid Parameter
+          </div>
+        {{ end }}
+        {{ if ne .TxHash "" }}
+          <div class="alert alert-success" role="alert">
+            TxHash : {{.TxHash}}
+          </div>
+        {{ end }}
+
         <div class="input-group mb-3" style="padding-left:0px">
           <div class="input-group-prepend">
-            <select id="amount" class="custom-select">
+            <select name="amount" id="amount" class="custom-select">
               <option selected>Select amount</option>
               <option value="10">10 ICB / 1 hour</option>
               <option value="30">30 ICB / 1 day</option>
@@ -28,12 +36,12 @@
             </select>
           </div>
 
-          <input type="text" id="address" class="form-control"  placeholder="0x0000000000000000000000000000000000000000">
+          <input type="text" name="address" id="address" class="form-control"  placeholder="0x0000000000000000000000000000000000000000">
           <div class="input-group-append">
-            <select id="network" class="custom-select">
+            <select name="network" id="network" class="custom-select">
               <option selected>Select network</option>
-              <option value="1">Rinkeby</option>
-              <option value="2">Ropsten</option>
+              <option value="3">Ropsten</option>
+              <option value="4">Rinkeby</option>
             </select>
           </div>
         </div>

@@ -2,28 +2,29 @@ package ethereum
 
 import (
     /*"fmt"
-    "log"
     "net/http"
     "os"
     "html/template"
-    "crypto/ecdsa"
     "github.com/joho/godotenv"
     "github.com/ethereum/go-ethereum/accounts/abi/bind"
     token "github.com/youkchan/icb_faucet/pkg/token"
-    "github.com/ethereum/go-ethereum/crypto"
     "github.com/ethereum/go-ethereum/common/hexutil"
     "github.com/ethereum/go-ethereum/core/types"
     "golang.org/x/crypto/sha3"*/
     "regexp"
     "math/big"
-    "github.com/ethereum/go-ethereum/common"
-    "github.com/ethereum/go-ethereum/ethclient"
-    token_library "github.com/youkchan/icb_faucet/pkg/token"
-    "github.com/ethereum/go-ethereum/accounts/abi/bind"
+    "crypto/ecdsa"
     "context"
     "errors"
     "log"
-    "fmt"
+    "github.com/ethereum/go-ethereum/common"
+    "github.com/ethereum/go-ethereum/ethclient"
+    "github.com/ethereum/go-ethereum/crypto"
+    token_library "github.com/youkchan/icb_faucet/pkg/token"
+    "github.com/ethereum/go-ethereum/accounts/abi/bind"
+    "github.com/ethereum/go-ethereum/core/types"
+    "golang.org/x/crypto/sha3"
+//    "fmt"
 )
 
 type ClientFactory struct {
@@ -42,6 +43,48 @@ type Token struct {
 type Network struct{
     Id int
     Endpoint string
+}
+
+type SendableAccount struct{
+    privateKey *ecdsa.PrivateKey
+    Address common.Address
+}
+
+
+func NewSendableAccount(str_privatekey string) (*SendableAccount) {
+    privateKey, err := crypto.HexToECDSA(str_privatekey)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    publicKey := privateKey.Public()
+    publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+    if !ok {
+        log.Fatal("error casting public key to ECDSA")
+    }
+
+    address := crypto.PubkeyToAddress(*publicKeyECDSA)
+    account := SendableAccount {
+        privateKey: privateKey,
+        Address: address,
+    }
+    return &account
+}
+
+type Account struct{
+    Address common.Address
+}
+
+func NewAccount(address string) (*Account) {
+    if !addressCheck(address) {
+        log.Fatal("Invalid Address")
+    }
+
+    commonAddress := common.HexToAddress(address)
+    account := Account {
+        Address: commonAddress,
+    }
+    return &account
 }
 
 func (n* Network) getName() (string, error) {
@@ -117,27 +160,62 @@ func (c* ClientFactory) CreateClient(network_id int) (*Client, error) {
     return &client, nil
 }
 
-func (c* Client) SendToken(address string, amount int, network_id int) string {
-    fmt.Println(address)
-    fmt.Println(amount)
-    fmt.Println(network_id)
-
-	/*if err := network.validate(); err != nil {
-		log.Fatal(err)
-	}
-
-    network_name, err := network.getName();
+func (c* Client) SendToken(token Token, fromAccount SendableAccount, toAccount Account, amount int) string {
+    nonce, err := c.Ethclient.PendingNonceAt(context.Background(), fromAccount.Address)
     if err != nil {
-		log.Fatal(err)
-    }*/
+        log.Fatal(err)
+    }
 
-    return address
+    //トークン送金Transactionをテストネット送るためのgasLimit、
+    value := big.NewInt(0) //（オプション）後で使用する関数NewTransactionの引数で必要になるため設定。Transactionと同時に送るETHの量を設定できます。
+    gasLimit := uint64(2000000)
+
+    //ロプステンネットワークから、現在のgasPriceを取得。トランザクションがマイニングされずに放置されることを防ぐ。
+    gasPrice, err := c.Ethclient.SuggestGasPrice(context.Background())
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    //送金先を指定
+    toAddress := toAccount.Address
+    //トークンコントラクトアドレスを指定
+    tokenAddress := common.HexToAddress(token.ContractAddress)
+    //ERC20のどの関数を使用するか指定。https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sendtransaction
+    transferFnSignature := []byte("transfer(address,uint256)")
+    //hash化し、先頭から4バイトまで取得。これで使用する関数を指定したことになる。
+    hash := sha3.NewLegacyKeccak256()
+    hash.Write(transferFnSignature)
+    methodID := hash.Sum(nil)[:4]
+
+    //0埋め
+    paddedAddress := common.LeftPadBytes(toAddress.Bytes(), 32)
+    //送金額を設定
+    pIntAmount := big.NewInt(int64(amount))
+    //0埋め
+    paddedAmount := common.LeftPadBytes(pIntAmount.Bytes(), 32)
+
+    //トランザクションで送るデータを作成
+    var data []byte
+    data = append(data, methodID...)
+    data = append(data, paddedAddress...)
+    data = append(data, paddedAmount...)
+
+    /***** Preparing signed transaction *****/
+    tx := types.NewTransaction(nonce, tokenAddress, value, gasLimit, gasPrice, data)
+    //signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, privateKey)
+    signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, fromAccount.privateKey)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    //サインしたトランザクションをRopstenNetworkに送る。
+    err = c.Ethclient.SendTransaction(context.Background(), signedTx)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    return signedTx.Hash().Hex()
 }
-
-/*func (c* Client) getTokenBalance(token_instance Token, address string)  (*big.Int, error) {
-
-    return address
-}*/
 
 func (c* Client) GetEtherBalance(address string)  (*big.Int, error) {
     if !addressCheck(address) {
