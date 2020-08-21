@@ -138,6 +138,11 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
     fmt.Println(r.RemoteAddr)
     ip, _, _ := net.SplitHostPort(r.RemoteAddr)
     fmt.Println(ip)
+
+    ip = r.Header.Get("X-REAL-IP")
+    netIP := net.ParseIP(ip)
+    fmt.Println(ip)
+    fmt.Println(netIP)
 /*    network_list := []ethereum.Network{
         *ethereum.NewNetwork(4, os.Getenv("INFURA_RINKEBY")),
         *ethereum.NewNetwork(3, os.Getenv("INFURA_ROPSTEN")),
@@ -160,7 +165,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
     params := Params {
         InvalidMessage : "",
         //TxHash : "",
-        TxHash : r.RemoteAddr,
+        TxHash : ip,
     }
     t.Execute(w, params)
 }
