@@ -10,14 +10,16 @@ import (
     "crypto/ecdsa"
     "math/big"
     "github.com/joho/godotenv"
-    "github.com/ethereum/go-ethereum/accounts/abi/bind"
+//    "github.com/ethereum/go-ethereum/accounts/abi/bind"
     "github.com/ethereum/go-ethereum/common"
-    "github.com/ethereum/go-ethereum/ethclient"
-    token "github.com/youkchan/icb_faucet/pkg/token"
+//    "github.com/ethereum/go-ethereum/ethclient"
+//    token "github.com/youkchan/icb_faucet/pkg/token"
     "github.com/ethereum/go-ethereum/crypto"
-    "github.com/ethereum/go-ethereum/common/hexutil"
+//    "github.com/ethereum/go-ethereum/common/hexutil"
     "github.com/ethereum/go-ethereum/core/types"
     "golang.org/x/crypto/sha3"
+    ethereum "github.com/youkchan/icb_faucet/pkg/ethereum"
+//    "reflect"
 )
 
 func main() {
@@ -44,6 +46,33 @@ func Env_load() {
     }
 }
 
+type Faucet struct{
+    privateKey *ecdsa.PrivateKey
+    address common.Address
+}
+
+func NewFaucet(str_privatekey string) (*Faucet) {
+
+    privateKey, err := crypto.HexToECDSA(str_privatekey)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    publicKey := privateKey.Public()
+    publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+    if !ok {
+        log.Fatal("error casting public key to ECDSA")
+    }
+
+    address := crypto.PubkeyToAddress(*publicKeyECDSA)
+    faucet := Faucet {
+        privateKey: privateKey,
+        address: address,
+    }
+    return &faucet
+
+}
+
 func sendHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
     if err != nil {
@@ -64,34 +93,70 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
             return
     }
 
-    client, err := ethclient.Dial("https://rinkeby.infura.io/v3/deac92b380cd4b219b0c57a59cf363b1")
+    /*rinkeby := ethereum.NewNetwork(4, os.Getenv("INFURA_RINKEBY"))
+    ropsten := ethereum.NewNetwork(3, os.Getenv("INFURA_ROPSTEN"))*/
+    network_list := []ethereum.Network{
+        *ethereum.NewNetwork(4, os.Getenv("INFURA_RINKEBY")),
+        *ethereum.NewNetwork(3, os.Getenv("INFURA_ROPSTEN")),
+    }
+    client_factory := ethereum.NewClientFactory(network_list)
+    //fmt.Println(client_factory)
+    ethereum_client, err := client_factory.CreateClient(4)
+    //fmt.Println(ethereum_client)
     if err != nil {
         log.Fatal(err)
     }
 
-    rinkebyICBAddress := common.HexToAddress("0x5446E3481e3fe4b3082067145A47d7a0F09d5E1A")
+    etherbalance, err := ethereum_client.GetEtherBalance("0x751e0e0de1881f614F40C14c175bdd12d0DCaa24")
+
+    fmt.Println(etherbalance)
+/*    client, err := ethclient.Dial(os.Getenv("INFURA_RINKEBY"))
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(reflect.TypeOf(client))
+    fmt.Println(client)
+    fmt.Println(reflect.TypeOf(client_.Ethclient))
+    fmt.Println(client_.Ethclient)*/
+    client := ethereum_client.Ethclient
+    var token *ethereum.Token
+    if ethereum_client.Network.Id == 4 {
+        token = ethereum.NewToken(os.Getenv("TOKEN_RINKEBY_ADDRESS"))
+    } else if ethereum_client.Network.Id == 3 {
+        token = ethereum.NewToken(os.Getenv("TOKEN_ROPSTEN_ADDRESS"))
+    }
+    tokenBalance, err := ethereum_client.GetTokenBalance(*token, "0x751e0e0de1881f614F40C14c175bdd12d0DCaa24")
+    fmt.Println(tokenBalance)
+
+    /*rinkebyICBAddress := common.HexToAddress("0x5446E3481e3fe4b3082067145A47d7a0F09d5E1A")
     rinkebyICBInstance, err := token.NewToken(rinkebyICBAddress, client)
     if err != nil {
       log.Fatal(err)
     }
+    fmt.Println(reflect.TypeOf(rinkebyICBInstance))*/
 
-    account := common.HexToAddress("0x751e0e0de1881f614F40C14c175bdd12d0DCaa24")
-    balance, err := client.BalanceAt(context.Background(), account, nil)
+    //account := common.HexToAddress("0x751e0e0de1881f614F40C14c175bdd12d0DCaa24")
+    /*balance, err := client.BalanceAt(context.Background(), account, nil)
     if err != nil {
         log.Fatal(err)
     }
-    fmt.Println(balance)
+    fmt.Println(balance)*/
 
-    bal, err := rinkebyICBInstance.BalanceOf(&bind.CallOpts{}, account)
+    /*bal, err := rinkebyICBInstance.BalanceOf(&bind.CallOpts{}, account)
     if err != nil {
       log.Fatal(err)
     }
-    fmt.Println(bal)
+    fmt.Println(bal)*/
 
-    privateKey, err := crypto.HexToECDSA(os.Getenv("PRIVATE_KEY"))
+
+    faucet := NewFaucet(os.Getenv("PRIVATE_KEY")) 
+    fmt.Println(faucet)
+
+    /*privateKey, err := crypto.HexToECDSA(os.Getenv("PRIVATE_KEY"))
     if err != nil {
         log.Fatal(err)
     }
+    fmt.Println(reflect.TypeOf(privateKey))
 
     publicKey := privateKey.Public()
     publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
@@ -105,9 +170,11 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
     //fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
     fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
     fmt.Println(fromAddress)
-
+    fmt.Println(reflect.TypeOf(fromAddress))
+*/
     //Ropstenネットワークから、Nonce情報を読み取る
-    nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+    //nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+    nonce, err := client.PendingNonceAt(context.Background(), faucet.address)
     if err != nil {
         log.Fatal(err)
     }
@@ -149,7 +216,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
     /***** Preparing signed transaction *****/
     tx := types.NewTransaction(nonce, tokenAddress, value, gasLimit, gasPrice, data)
-    signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, privateKey)
+    //signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, privateKey)
+    signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, faucet.privateKey)
     if err != nil {
         log.Fatal(err)
     }
