@@ -7,6 +7,7 @@ import (
     "net/http"
     "net"
     "os"
+    "strings"
     "strconv"
     "html/template"
 //    "crypto/ecdsa"
@@ -143,6 +144,16 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
     netIP := net.ParseIP(ip)
     fmt.Println(ip)
     fmt.Println(netIP)
+    var ipAddress string
+    for _, h := range []string{"X-Forwarded-For", "X-Real-Ip"} {
+        for _, ip := range strings.Split(r.Header.Get(h), ",") {
+            // header can contain spaces too, strip those out.
+            realIP := net.ParseIP(strings.Replace(ip, " ", "", -1))
+            ipAddress = ip
+    fmt.Println(realIP)
+        }
+    }
+
 /*    network_list := []ethereum.Network{
         *ethereum.NewNetwork(4, os.Getenv("INFURA_RINKEBY")),
         *ethereum.NewNetwork(3, os.Getenv("INFURA_ROPSTEN")),
@@ -165,7 +176,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
     params := Params {
         InvalidMessage : "",
         //TxHash : "",
-        TxHash : ip,
+        TxHash : ipAddress,
     }
     t.Execute(w, params)
 }
