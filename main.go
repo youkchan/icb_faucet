@@ -206,7 +206,7 @@ func IsLimitedAccess(ipaddr string) bool {
             interval_time = 48
         }
 
-        db_time, _ := time.Parse("2006-01-02 15:04:05 MST", u.Time)
+        db_time, _ := time.Parse("2006-01-02 15:04:05 -0700 MST", u.Time)
         log.Println(now)
         log.Println(db_time)
         db_time = db_time.Add(time.Duration(interval_time) * time.Hour)
@@ -221,7 +221,7 @@ func saveIPAddr(ipaddr string, amount int) {
     ref := initFirebaseRef()
     fmt.Println(reflect.TypeOf(ref))
     jst, _ := time.LoadLocation("Asia/Tokyo")
-    now := time.Now().In(jst).Format("2006-01-02 15:04:05 MST")
+    now := time.Now().In(jst).Format("2006-01-02 15:04:05 -0700 MST")
     user := User {
         IPAddr: ipaddr,
         Time:    now,
