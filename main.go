@@ -207,7 +207,10 @@ func IsLimitedAccess(ipaddr string) bool {
         }
 
         db_time, _ := time.Parse("2006-01-02 15:04:05 MST", u.Time)
+        log.Println(now)
+        log.Println(db_time)
         db_time = db_time.Add(time.Duration(interval_time) * time.Hour)
+        log.Println(db_time)
         isLimited = now.Unix() < db_time.Unix()
     }
 
