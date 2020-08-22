@@ -19,7 +19,7 @@ jobs:
               echo "TOKEN_RINKEBY_ADDRESS=$TOKEN_RINKEBY_ADDRESS" >> .env
               echo "TOKEN_ROPSTEN_ADDRESS=$TOKEN_ROPSTEN_ADDRESS" >> .env
               echo "FIREBASE_ENDPOINT=$FIREBASE_ENDPOINT" >> .env
-              echo "$FIREBASE_ENDPOINT" > serviceAccountKey.json 
+              echo "$FIREBASE_ACCOUNT" > serviceAccountKey.json 
       - gcp-cli/initialize
       - run:
           name: Deploy to Google App Engine
