@@ -131,10 +131,22 @@ func sendHandler(w http.ResponseWriter, r *http.Request) {
         token = ethereum.NewToken(os.Getenv("TOKEN_ROPSTEN_ADDRESS"))
     }
 
-    //ip := ipaddr.GetIPAdress(r)
+    if !strings.HasPrefix(r.Host, "localhost") {
+        ip := ipaddr.GetIPAdress(r)
+        isLimited := IsLimitedAccess(ip)
+        if isLimited {
+            params = returnErrorParams("Too many request, Please wait a moment")
+            t.Execute(w, params)
+            return
+        }
+    }
 
     faucet_account := ethereum.NewSendableAccount(os.Getenv("PRIVATE_KEY"))
     txhash := ethereum_client.SendToken(*token, *faucet_account, *account, amount * 10000)
+    if !strings.HasPrefix(r.Host, "localhost") {
+        ip := ipaddr.GetIPAdress(r)
+        saveIPAddr(ip, amount)
+    }
 
     params = Params {
         InvalidMessage : "",
@@ -224,7 +236,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
             return
     }
 
-
     ip := ipaddr.GetIPAdress(r)
     fmt.Println("ip")
     fmt.Println(ip)
@@ -234,9 +245,9 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
             FullName:    "Alan Turing"})*/
 
     //saveIPAddr("127.0.0.1", 10)
-    isLimited := IsLimitedAccess("127.0.0.1")
+    //isLimited := IsLimitedAccess("127.0.0.1")
 
-    fmt.Println(isLimited)
+    //fmt.Println(isLimited)
 
 
     /*opt := option.WithCredentialsFile("serviceAccountKey.json")
@@ -291,7 +302,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 */
     params := Params {
         InvalidMessage : "",
-        //TxHash : "",
         TxHash : "",
     }
     t.Execute(w, params)
