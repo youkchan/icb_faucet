@@ -31,7 +31,7 @@ import (
 //    "firebase.google.com/go/auth"
 
     "google.golang.org/api/option"
-    "reflect"
+//    "reflect"
 )
 
 type Params struct{
@@ -74,6 +74,7 @@ func returnErrorParams(message string) Params {
 }
 
 func sendHandler(w http.ResponseWriter, r *http.Request) {
+    Env_load()
     t := template.Must(template.ParseFiles("web/html/index.html"))
 
     var params Params
@@ -111,9 +112,23 @@ func sendHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    rinkeby, err := ethereum.NewNetwork(4, os.Getenv("INFURA_RINKEBY"))
+    if err != nil {
+        params = returnErrorParams("Invalid Network")
+        t.Execute(w, params)
+        return
+    }
+
+    ropsten, err := ethereum.NewNetwork(3, os.Getenv("INFURA_ROPSTEN"))
+    if err != nil {
+        params = returnErrorParams("Invalid Network")
+        t.Execute(w, params)
+        return
+    }
+
     network_list := []ethereum.Network{
-        *ethereum.NewNetwork(4, os.Getenv("INFURA_RINKEBY")),
-        *ethereum.NewNetwork(3, os.Getenv("INFURA_ROPSTEN")),
+        *rinkeby,
+        *ropsten,
     }
     client_factory := ethereum.NewClientFactory(network_list)
 
@@ -141,7 +156,13 @@ func sendHandler(w http.ResponseWriter, r *http.Request) {
         }
     }
 
-    faucet_account := ethereum.NewSendableAccount(os.Getenv("PRIVATE_KEY"))
+    faucet_account, err := ethereum.NewSendableAccount(os.Getenv("PRIVATE_KEY"))
+    if err != nil {
+        params = returnErrorParams("Invalid Private Key")
+        t.Execute(w, params)
+        return
+    }
+
     txhash := ethereum_client.SendToken(*token, *faucet_account, *account, amount * 10000)
     if !strings.HasPrefix(r.Host, "localhost") {
         ip := ipaddr.GetIPAdress(r)
@@ -177,11 +198,26 @@ func initFirebaseRef() (*db.Ref){
     return ref
 }
 
+func getIntervalTime(amount int) int{
+    var interval_time int
+    if amount == 10 {
+        interval_time = 1
+    } else if amount == 30 {
+        interval_time = 24
+    } else if amount == 50 {
+        interval_time = 48
+    } else {
+        interval_time = 48
+    }
+
+    return interval_time
+}
 
 func IsLimitedAccess(ipaddr string) bool {
     ref := initFirebaseRef()
 
     results, err := ref.OrderByChild("ipaddr").EqualTo(ipaddr).GetOrdered(context.Background())
+    fmt.Println(results)
     if err != nil {
         log.Fatalln(err)
     }
@@ -194,23 +230,10 @@ func IsLimitedAccess(ipaddr string) bool {
         if err := r.Unmarshal(&u); err != nil {
             log.Fatalln("Error unmarshaling result:", err)
         }
-
-        var interval_time int
-        if u.Amount == 10 {
-            interval_time = 1
-        } else if u.Amount == 30 {
-            interval_time = 24
-        } else if u.Amount == 50 {
-            interval_time = 48
-        } else {
-            interval_time = 48
-        }
+        interval_time := getIntervalTime(u.Amount)
 
         db_time, _ := time.Parse("2006-01-02 15:04:05 -0700 MST", u.Time)
-        //log.Println(now)
-        //log.Println(db_time)
         db_time = db_time.Add(time.Duration(interval_time) * time.Hour)
-        //log.Println(db_time)
         isLimited = now.Unix() < db_time.Unix()
     }
 
@@ -219,7 +242,6 @@ func IsLimitedAccess(ipaddr string) bool {
 
 func saveIPAddr(ipaddr string, amount int) {
     ref := initFirebaseRef()
-    fmt.Println(reflect.TypeOf(ref))
     jst, _ := time.LoadLocation("Asia/Tokyo")
     now := time.Now().In(jst).Format("2006-01-02 15:04:05 -0700 MST")
     user := User {
@@ -241,70 +263,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
             return
     }
 
-    ip := ipaddr.GetIPAdress(r)
-    fmt.Println("ip")
-    fmt.Println(ip)
-    //usersRef := ref.Child("users")
-    /*err = usersRef.Set(ctx, User{
-            DateOfBirth: "June 23, 1912",
-            FullName:    "Alan Turing"})*/
-
-    //saveIPAddr("127.0.0.1", 10)
-    //isLimited := IsLimitedAccess("127.0.0.1")
-
-    //fmt.Println(isLimited)
-
-
-    /*opt := option.WithCredentialsFile("serviceAccountKey.json")
-
-    fmt.Println(cref)
-    var users map[string]User
-
-    //results, err := ref.OrderByChild("ipaddr").EqualTo(ipaddr).Get(ctx, &users)
-    results := ref.Get(ctx, &users)
-    fmt.Println(results)
-    fmt.Println(reflect.TypeOf(results))*/
-
-
-    fmt.Println(r.Host)
-    fmt.Println(strings.HasPrefix(r.Host, "localhost"))
-    //IsLimitedAccess("test")
-    //results, err := ref.OrderByChild("full_name").EqualTo("Alan Turing").GetOrdered(ctx)
-    //results, err := ref.OrderByValue().GetOrdered(ctx)
-    /*fmt.Println("results")
-    fmt.Println(results)
-
-    for _, r := range results {
-        var d User
-        if err := r.Unmarshal(&d); err != nil {
-                log.Fatalln("Error unmarshaling result:", err)
-        }
-        fmt.Println(d)
-    }*/
-    start := time.Now().Format("2006-01-02 15:04:05")
-    fmt.Println(start)
-
-    ttime, _ := time.Parse("2006-01-02 15:04:05", start)
-    fmt.Println(ttime)
-/*    network_list := []ethereum.Network{
-        *ethereum.NewNetwork(4, os.Getenv("INFURA_RINKEBY")),
-        *ethereum.NewNetwork(3, os.Getenv("INFURA_ROPSTEN")),
-    }
-    client_factory := ethereum.NewClientFactory(network_list)
-    ethereum_client, err := client_factory.CreateClient(4)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    var token *ethereum.Token
-    if ethereum_client.Network.Id == 4 {
-        token = ethereum.NewToken(os.Getenv("TOKEN_RINKEBY_ADDRESS"))
-    } else if ethereum_client.Network.Id == 3 {
-        token = ethereum.NewToken(os.Getenv("TOKEN_ROPSTEN_ADDRESS"))
-    }
-    tokenBalance, err := ethereum_client.GetTokenBalance(*token, "0x751e0e0de1881f614F40C14c175bdd12d0DCaa24")
-    fmt.Println(tokenBalance)
-*/
     params := Params {
         InvalidMessage : "",
         TxHash : "",
