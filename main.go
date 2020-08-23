@@ -31,7 +31,7 @@ import (
 //    "firebase.google.com/go/auth"
 
     "google.golang.org/api/option"
-//    "reflect"
+    "reflect"
 )
 
 type Params struct{
@@ -217,7 +217,7 @@ func IsLimitedAccess(ipaddr string) bool {
     ref := initFirebaseRef()
 
     results, err := ref.OrderByChild("ipaddr").EqualTo(ipaddr).GetOrdered(context.Background())
-    fmt.Println(results)
+    fmt.Println(reflect.TypeOf(results))
     if err != nil {
         log.Fatalln(err)
     }
