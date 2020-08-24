@@ -22,7 +22,12 @@
         {{ end }}
         {{ if ne .TxHash "" }}
           <div class="alert alert-success" role="alert">
-            TxHash : {{.TxHash}}
+            TxHash : 
+            {{ if eq .Network 4 }}
+            <a href="https://rinkeby.etherscan.io/tx/{{.TxHash}}" target="_blank">{{.TxHash}}</a>
+            {{ else if eq .Network 3 }}
+            <a href="https://ropsten.etherscan.io/tx/{{.TxHash}}" target="_blank">{{.TxHash}}</a>
+            {{ end }}
           </div>
         {{ end }}
 
@@ -50,6 +55,7 @@
         </div>
         <p>This ICB faucet is <span style="font-weight:bold">not</span> official faucet. The faucet is running on the Rinkeby and the Ropsten network.</p>
         <p>To prevent from attacking, requests from the same IP address are limited for a certain period of time. </p>
+        <p>Please donate any excess ICB testnet token to the faucet. <span style="font-weight:bold">0x751e0e0de1881f614f40c14c175bdd12d0dcaa24</span></p>
       </form>
 
 

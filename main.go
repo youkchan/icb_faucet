@@ -3,7 +3,6 @@ package main
 import (
     "log"
     "time"
-    "fmt"
     "net/http"
     "os"
     "strings"
@@ -17,6 +16,7 @@ import (
 
 type Params struct{
     InvalidMessage string
+    Network int
     TxHash string
 }
 
@@ -47,7 +47,6 @@ func handleRequest() http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         Env_load()
         var ref db.DBClient
-        //if strings.HasPrefix(r.Host, "localhost") || flag.Lookup("test.v") == nil {
         if strings.HasPrefix(r.Host, "localhost") || strings.HasSuffix(os.Args[0], ".test") {
             ref = db.InitFirebaseRef("users-test", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json")
         } else {
@@ -68,6 +67,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
     params := Params {
         InvalidMessage : "",
+        Network : 0,
         TxHash : "",
     }
     t.Execute(w, params)
@@ -146,8 +146,7 @@ func sendHandler(w http.ResponseWriter, r *http.Request, ref db.DBClient) {
     }
 
     var isLimited bool
-    //if strings.HasPrefix(r.Host, "localhost") || flag.Lookup("test.v") == nil {
-        if strings.HasPrefix(r.Host, "localhost") || strings.HasSuffix(os.Args[0], ".test") {
+    if strings.HasPrefix(r.Host, "localhost") || strings.HasSuffix(os.Args[0], ".test") {
         isLimited = IsLimitedAccess("127.0.0.1", ref)
     } else {
         ip := ipaddr.GetIPAdress(r)
@@ -168,8 +167,7 @@ func sendHandler(w http.ResponseWriter, r *http.Request, ref db.DBClient) {
     }
 
     txhash := ethereum_client.SendToken(*token, *faucet_account, *account, amount * 10000)
-    //if strings.HasPrefix(r.Host, "localhost") || flag.Lookup("test.v") == nil {
-        if strings.HasPrefix(r.Host, "localhost") || strings.HasSuffix(os.Args[0], ".test") {
+    if strings.HasPrefix(r.Host, "localhost") || strings.HasSuffix(os.Args[0], ".test") {
         SaveIPAddr("127.0.0.1", amount, ref)
     } else {
         ip := ipaddr.GetIPAdress(r)
@@ -178,6 +176,7 @@ func sendHandler(w http.ResponseWriter, r *http.Request, ref db.DBClient) {
 
     params = Params {
         InvalidMessage : "",
+        Network : network,
         TxHash : txhash,
     }
 
@@ -195,6 +194,7 @@ func Env_load() {
 func returnErrorParams(message string) Params {
     params := Params {
         InvalidMessage : message,
+        Network : 0,
         TxHash : "",
     }
     return params
