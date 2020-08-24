@@ -26,6 +26,7 @@ import (
 //    "golang.org/x/crypto/sha3"
     ethereum "github.com/youkchan/icb_faucet/pkg/ethereum"
     ipaddr "github.com/youkchan/icb_faucet/pkg/ipaddr"
+    firebase_library "github.com/youkchan/icb_faucet/pkg/firebase"
     firebase "firebase.google.com/go"
     "firebase.google.com/go/db"
 //    "firebase.google.com/go/auth"
@@ -146,9 +147,10 @@ func sendHandler(w http.ResponseWriter, r *http.Request) {
         token = ethereum.NewToken(os.Getenv("TOKEN_ROPSTEN_ADDRESS"))
     }
 
+    ref := firebase_library.InitFirebaseRef("users", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json")
     if !strings.HasPrefix(r.Host, "localhost") {
         ip := ipaddr.GetIPAdress(r)
-        isLimited := IsLimitedAccess(ip)
+        isLimited := IsLimitedAccess(ip, ref)
         if isLimited {
             params = returnErrorParams("Too many request, Please wait a moment")
             t.Execute(w, params)
@@ -185,6 +187,7 @@ type User struct {
 
 func initFirebaseRef() (*db.Ref){
     opt := option.WithCredentialsFile("serviceAccountKey.json")
+    fmt.Println(reflect.TypeOf(opt))
     config := &firebase.Config{DatabaseURL: os.Getenv("FIREBASE_ENDPOINT")}
     app, err := firebase.NewApp(context.Background(), config, opt)
     if err != nil {
@@ -213,11 +216,13 @@ func getIntervalTime(amount int) int{
     return interval_time
 }
 
-func IsLimitedAccess(ipaddr string) bool {
-    ref := initFirebaseRef()
+func IsLimitedAccess(ipaddr string, ref firebase_library.DBClient) bool {
+    //ref := initFirebaseRef()
+    //ref := firebase_library.InitFirebaseRef("users", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json")
+    results, err := ref.Fetch(ipaddr)
 
-    results, err := ref.OrderByChild("ipaddr").EqualTo(ipaddr).GetOrdered(context.Background())
-    fmt.Println(reflect.TypeOf(results))
+    //results, err := ref.OrderByChild("ipaddr").EqualTo(ipaddr).GetOrdered(context.Background())
+//    fmt.Println(reflect.TypeOf(results))
     if err != nil {
         log.Fatalln(err)
     }
@@ -231,6 +236,7 @@ func IsLimitedAccess(ipaddr string) bool {
             log.Fatalln("Error unmarshaling result:", err)
         }
         interval_time := getIntervalTime(u.Amount)
+    fmt.Println(u.Amount)
 
         db_time, _ := time.Parse("2006-01-02 15:04:05 -0700 MST", u.Time)
         db_time = db_time.Add(time.Duration(interval_time) * time.Hour)
@@ -263,6 +269,36 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
             return
     }
 
+    ref := firebase_library.NewReference(initFirebaseRef())
+    fmt.Println(ref)
+    results,_ := ref.Fetch("2001:268:c145:92df:80dc:a420:d569:869c")
+
+    for _, r := range results {
+        var u User
+        if err := r.Unmarshal(&u); err != nil {
+            log.Fatalln("Error unmarshaling result:", err)
+        }
+        fmt.Println(u)
+    }
+    reff := firebase_library.InitFirebaseRef("users", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json")
+    results,_ = reff.Fetch("2001:268:c145:92df:80dc:a420:d569:869c")
+    IsLimitedAccess("2001:268:c145:92df:80dc:a420:d569:869c", firebase_library.InitFirebaseRef("users", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json"))
+    fake := firebase_library.FakeDBClient{}
+    fmt.Println(fake.Fetch("ip"))
+    //ref := initFirebaseRef()
+    fmt.Println("results")
+    fmt.Println(results)
+    results_ ,_ := fake.Fetch("ip")
+    fmt.Println(reflect.TypeOf(results))
+    for _, r := range results_ {
+        var u User
+        if err := r.Unmarshal(&u); err != nil {
+            log.Fatalln("Error unmarshaling result:", err)
+        }
+        fmt.Println(u)
+
+    }
+    //fmt.Println(reflect.TypeOf(ref))
     params := Params {
         InvalidMessage : "",
         TxHash : "",
