@@ -46,10 +46,10 @@ func handleRequest() http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         Env_load()
         var ref db.DBClient
-        if !strings.HasPrefix(r.Host, "localhost") && !strings.HasPrefix(r.Host, ""){
-            ref = db.InitFirebaseRef("users", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json")
-        } else {
+        if strings.HasPrefix(r.Host, "localhost") || strings.HasPrefix(r.Host, ""){
             ref = db.InitFirebaseRef("users-test", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json")
+        } else {
+            ref = db.InitFirebaseRef("users", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json")
         }
         sendHandler(w, r, ref)
     }
@@ -144,11 +144,11 @@ func sendHandler(w http.ResponseWriter, r *http.Request, ref db.DBClient) {
     }
 
     var isLimited bool
-    if !strings.HasPrefix(r.Host, "localhost") && !strings.HasPrefix(r.Host, ""){
+    if strings.HasPrefix(r.Host, "localhost") || strings.HasPrefix(r.Host, ""){
+        isLimited = IsLimitedAccess("127.0.0.1", ref)
+    } else {
         ip := ipaddr.GetIPAdress(r)
         isLimited = IsLimitedAccess(ip, ref)
-    } else {
-        isLimited = IsLimitedAccess("127.0.0.1", ref)
     }
 
     if isLimited {
@@ -165,11 +165,11 @@ func sendHandler(w http.ResponseWriter, r *http.Request, ref db.DBClient) {
     }
 
     txhash := ethereum_client.SendToken(*token, *faucet_account, *account, amount * 10000)
-    if !strings.HasPrefix(r.Host, "localhost") && !strings.HasPrefix(r.Host, ""){
+    if strings.HasPrefix(r.Host, "localhost") || strings.HasPrefix(r.Host, ""){
+        SaveIPAddr("127.0.0.1", amount, ref)
+    } else {
         ip := ipaddr.GetIPAdress(r)
         SaveIPAddr(ip, amount, ref)
-    } else {
-        SaveIPAddr("127.0.0.1", amount, ref)
     }
 
     params = Params {
