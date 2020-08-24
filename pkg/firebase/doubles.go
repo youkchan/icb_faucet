@@ -1,24 +1,39 @@
-package firebase 
+package firebase
 
 import(
 	"encoding/json"
 )
 
 type FakeDBClient struct {
+    FakeData User
+}
+
+type User struct {
+    IPAddr string
+    Time string
+    Amount int
 }
 
 type NodeImp struct {
     Value interface{}
 }
 
-func (f *FakeDBClient) Fetch(ipaddr string) ([]Node, error) {
+func (r FakeDBClient) Push(v interface{}) (error) {
+    return nil
+}
+
+func (r FakeDBClient) Delete() (error) {
+    return nil
+}
+
+func (f FakeDBClient) Fetch(ipaddr string) ([]Node, error) {
 
     var nodes []Node
     nodes = append(nodes, NodeImp{
         Value: map[string]interface{}{
-                "IPAddr": "2001:268:c145:92df:80dc:a420:d569:869c",
-                "Time": "2020-08-23 18:46:24 +0900 JST",
-                "Amount": 50,
+                "IPAddr": f.FakeData.IPAddr,
+                "Time": f.FakeData.Time,
+                "Amount": f.FakeData.Amount,
             },
         })
      return nodes ,nil

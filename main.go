@@ -1,38 +1,17 @@
 package main
 
 import (
-    "fmt"
-//    "bytes"
-    //"context"
-    "golang.org/x/net/context"
     "log"
     "time"
     "net/http"
-//    "net"
     "os"
     "strings"
     "strconv"
     "html/template"
-//    "crypto/ecdsa"
-//    "math/big"
     "github.com/joho/godotenv"
-//    "github.com/ethereum/go-ethereum/accounts/abi/bind"
-//    "github.com/ethereum/go-ethereum/common"
-//    "github.com/ethereum/go-ethereum/ethclient"
-//    token "github.com/youkchan/icb_faucet/pkg/token"
-//    "github.com/ethereum/go-ethereum/crypto"
-//    "github.com/ethereum/go-ethereum/common/hexutil"
-//    "github.com/ethereum/go-ethereum/core/types"
-//    "golang.org/x/crypto/sha3"
     ethereum "github.com/youkchan/icb_faucet/pkg/ethereum"
     ipaddr "github.com/youkchan/icb_faucet/pkg/ipaddr"
-    firebase_library "github.com/youkchan/icb_faucet/pkg/firebase"
-    firebase "firebase.google.com/go"
-    "firebase.google.com/go/db"
-//    "firebase.google.com/go/auth"
-
-    "google.golang.org/api/option"
-    "reflect"
+    db "github.com/youkchan/icb_faucet/pkg/firebase"
 )
 
 type Params struct{
@@ -40,10 +19,15 @@ type Params struct{
     TxHash string
 }
 
+type User struct {
+    IPAddr string `json:"ipaddr"`
+    Time    string `json:"time"`
+    Amount    int `json:"amount"`
+}
 
 func main() {
     http.Handle("/web/css/", http.StripPrefix("/web/css/", http.FileServer(http.Dir("web/css/"))))
-    http.HandleFunc("/send", sendHandler)
+    http.HandleFunc("/send", handleRequest())
     http.HandleFunc("/", indexHandler)
 
     port := os.Getenv("PORT")
@@ -58,23 +42,35 @@ func main() {
     }
 }
 
-func Env_load() {
-    err := godotenv.Load()
-    if err != nil {
-        log.Fatal("Error loading .env file")
+func handleRequest() http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        Env_load()
+        var ref db.DBClient
+        if !strings.HasPrefix(r.Host, "localhost") && !strings.HasPrefix(r.Host, ""){
+            ref = db.InitFirebaseRef("users", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json")
+        } else {
+            ref = db.InitFirebaseRef("users-test", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json")
+        }
+        sendHandler(w, r, ref)
     }
 }
 
-func returnErrorParams(message string) Params {
+
+
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+    t := template.Must(template.ParseFiles("web/html/index.html"))
+    if r.URL.Path != "/" {
+            http.NotFound(w, r)
+            return
+    }
+
     params := Params {
-        InvalidMessage : message,
+        InvalidMessage : "",
         TxHash : "",
     }
-
-    return params
+    t.Execute(w, params)
 }
-
-func sendHandler(w http.ResponseWriter, r *http.Request) {
+func sendHandler(w http.ResponseWriter, r *http.Request, ref db.DBClient) {
     Env_load()
     t := template.Must(template.ParseFiles("web/html/index.html"))
 
@@ -147,15 +143,18 @@ func sendHandler(w http.ResponseWriter, r *http.Request) {
         token = ethereum.NewToken(os.Getenv("TOKEN_ROPSTEN_ADDRESS"))
     }
 
-    ref := firebase_library.InitFirebaseRef("users", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json")
-    if !strings.HasPrefix(r.Host, "localhost") {
+    var isLimited bool
+    if !strings.HasPrefix(r.Host, "localhost") && !strings.HasPrefix(r.Host, ""){
         ip := ipaddr.GetIPAdress(r)
-        isLimited := IsLimitedAccess(ip, ref)
-        if isLimited {
-            params = returnErrorParams("Too many request, Please wait a moment")
-            t.Execute(w, params)
-            return
-        }
+        isLimited = IsLimitedAccess(ip, ref)
+    } else {
+        isLimited = IsLimitedAccess("127.0.0.1", ref)
+    }
+
+    if isLimited {
+        params = returnErrorParams("Too many request, Please wait a moment")
+        t.Execute(w, params)
+        return
     }
 
     faucet_account, err := ethereum.NewSendableAccount(os.Getenv("PRIVATE_KEY"))
@@ -166,9 +165,11 @@ func sendHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     txhash := ethereum_client.SendToken(*token, *faucet_account, *account, amount * 10000)
-    if !strings.HasPrefix(r.Host, "localhost") {
+    if !strings.HasPrefix(r.Host, "localhost") && !strings.HasPrefix(r.Host, ""){
         ip := ipaddr.GetIPAdress(r)
-        saveIPAddr(ip, amount)
+        SaveIPAddr(ip, amount, ref)
+    } else {
+        SaveIPAddr("127.0.0.1", amount, ref)
     }
 
     params = Params {
@@ -179,28 +180,21 @@ func sendHandler(w http.ResponseWriter, r *http.Request) {
     t.Execute(w, params)
 }
 
-type User struct {
-    IPAddr string `json:"ipaddr"`
-    Time    string `json:"time"`
-    Amount    int `json:"amount"`
+
+func Env_load() {
+    err := godotenv.Load()
+    if err != nil {
+        log.Fatal("Error loading .env file")
+    }
 }
 
-func initFirebaseRef() (*db.Ref){
-    opt := option.WithCredentialsFile("serviceAccountKey.json")
-    fmt.Println(reflect.TypeOf(opt))
-    config := &firebase.Config{DatabaseURL: os.Getenv("FIREBASE_ENDPOINT")}
-    app, err := firebase.NewApp(context.Background(), config, opt)
-    if err != nil {
-        log.Fatalln("Error initializing database client:", err)
+func returnErrorParams(message string) Params {
+    params := Params {
+        InvalidMessage : message,
+        TxHash : "",
     }
-    client, err := app.Database(context.Background())
-    if err != nil {
-        log.Fatalln("Error initializing database client:", err)
-    }
-    ref := client.NewRef("users")
-    return ref
+    return params
 }
-
 func getIntervalTime(amount int) int{
     var interval_time int
     if amount == 10 {
@@ -216,13 +210,8 @@ func getIntervalTime(amount int) int{
     return interval_time
 }
 
-func IsLimitedAccess(ipaddr string, ref firebase_library.DBClient) bool {
-    //ref := initFirebaseRef()
-    //ref := firebase_library.InitFirebaseRef("users", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json")
+func IsLimitedAccess(ipaddr string, ref db.DBClient) bool {
     results, err := ref.Fetch(ipaddr)
-
-    //results, err := ref.OrderByChild("ipaddr").EqualTo(ipaddr).GetOrdered(context.Background())
-//    fmt.Println(reflect.TypeOf(results))
     if err != nil {
         log.Fatalln(err)
     }
@@ -236,7 +225,6 @@ func IsLimitedAccess(ipaddr string, ref firebase_library.DBClient) bool {
             log.Fatalln("Error unmarshaling result:", err)
         }
         interval_time := getIntervalTime(u.Amount)
-    fmt.Println(u.Amount)
 
         db_time, _ := time.Parse("2006-01-02 15:04:05 -0700 MST", u.Time)
         db_time = db_time.Add(time.Duration(interval_time) * time.Hour)
@@ -246,8 +234,7 @@ func IsLimitedAccess(ipaddr string, ref firebase_library.DBClient) bool {
     return isLimited
 }
 
-func saveIPAddr(ipaddr string, amount int) {
-    ref := initFirebaseRef()
+func SaveIPAddr(ipaddr string, amount int, ref db.DBClient) {
     jst, _ := time.LoadLocation("Asia/Tokyo")
     now := time.Now().In(jst).Format("2006-01-02 15:04:05 -0700 MST")
     user := User {
@@ -255,53 +242,8 @@ func saveIPAddr(ipaddr string, amount int) {
         Time:    now,
         Amount:  amount,
     }
-    _, err := ref.Push(context.Background() , user)
+    err := ref.Push(user)
     if err != nil {
         log.Fatalln(err)
     }
-}
-
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-    Env_load()
-    t := template.Must(template.ParseFiles("web/html/index.html"))
-    if r.URL.Path != "/" {
-            http.NotFound(w, r)
-            return
-    }
-
-    ref := firebase_library.NewReference(initFirebaseRef())
-    fmt.Println(ref)
-    results,_ := ref.Fetch("2001:268:c145:92df:80dc:a420:d569:869c")
-
-    for _, r := range results {
-        var u User
-        if err := r.Unmarshal(&u); err != nil {
-            log.Fatalln("Error unmarshaling result:", err)
-        }
-        fmt.Println(u)
-    }
-    reff := firebase_library.InitFirebaseRef("users", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json")
-    results,_ = reff.Fetch("2001:268:c145:92df:80dc:a420:d569:869c")
-    IsLimitedAccess("2001:268:c145:92df:80dc:a420:d569:869c", firebase_library.InitFirebaseRef("users", os.Getenv("FIREBASE_ENDPOINT"), "serviceAccountKey.json"))
-    fake := firebase_library.FakeDBClient{}
-    fmt.Println(fake.Fetch("ip"))
-    //ref := initFirebaseRef()
-    fmt.Println("results")
-    fmt.Println(results)
-    results_ ,_ := fake.Fetch("ip")
-    fmt.Println(reflect.TypeOf(results))
-    for _, r := range results_ {
-        var u User
-        if err := r.Unmarshal(&u); err != nil {
-            log.Fatalln("Error unmarshaling result:", err)
-        }
-        fmt.Println(u)
-
-    }
-    //fmt.Println(reflect.TypeOf(ref))
-    params := Params {
-        InvalidMessage : "",
-        TxHash : "",
-    }
-    t.Execute(w, params)
 }

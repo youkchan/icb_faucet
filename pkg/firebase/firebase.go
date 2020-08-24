@@ -4,7 +4,6 @@ import (
     "firebase.google.com/go/db"
     "context"
     "log"
-//	"encoding/json"
     firebase "firebase.google.com/go"
     "google.golang.org/api/option"
 
@@ -12,6 +11,8 @@ import (
 
 type DBClient interface {
     Fetch(ipaddr string) ([]Node, error)
+    Push(v interface{}) (error)
+    Delete() (error)
 }
 
 type Node interface {
@@ -19,7 +20,7 @@ type Node interface {
 }
 
 type Reference struct {
-	db      *db.Ref
+	db *db.Ref
 }
 
 func NewReference (db *db.Ref) *Reference {
@@ -38,6 +39,24 @@ func (r *Reference) Fetch(ipaddr string) ([]Node, error) {
     return node, nil
 }
 
+func (r *Reference) Push(v interface{}) (error) {
+    _, err := r.db.Push(context.Background() , v)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
+func (r *Reference) Delete() (error) {
+    err := r.db.Delete(context.Background())
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
 func InitFirebaseRef(reference_name string, url string, credential_file_path string) (DBClient){
     opt := option.WithCredentialsFile(credential_file_path)
     config := &firebase.Config{DatabaseURL: url}
@@ -53,12 +72,3 @@ func InitFirebaseRef(reference_name string, url string, credential_file_path str
     return ref
 }
 
-
-/*func (n *Node) Unmarshal(v interface{}) (error) {
-	b, err := json.Marshal(n.Value)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(b, v)
-    return nil
-}*/

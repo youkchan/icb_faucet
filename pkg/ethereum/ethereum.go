@@ -7,8 +7,6 @@ import (
     "context"
     "errors"
     "log"
-//    "reflect"
-//    "fmt"
     "github.com/ethereum/go-ethereum/common"
     "github.com/ethereum/go-ethereum/ethclient"
     "github.com/ethereum/go-ethereum/crypto"
@@ -78,17 +76,6 @@ func NewAccount(address string) (*Account, error) {
     return &account, nil
 }
 
-/*func (n* Network) getName() (string, error) {
-    if(n.Id == 3) {
-        return "ropsten" , nil
-    } else if(n.Id == 4) {
-        return "rinkeby" , nil
-    } else {
-        log.Fatal("invalid id")
-        return "", nil
-    }
-}*/
-
 func (n* Network) validate() error {
     if(n.Id != 3 && n.Id != 4) {
         return errors.New("Network ID must be 3 or 4")
@@ -151,36 +138,6 @@ func (c* ClientFactory) CreateClient(network_id int) (*Client, error) {
 }
 
 func (c* Client) SendToken(token Token, fromAccount SendableAccount, toAccount Account, amount int) string {
-    /*nonce, err := c.Ethclient.PendingNonceAt(context.Background(), fromAccount.Address)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    value := big.NewInt(0)
-    gasLimit := uint64(2000000)
-
-    gasPrice, err := c.Ethclient.SuggestGasPrice(context.Background())
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    toAddress := toAccount.Address
-    tokenAddress := common.HexToAddress(token.ContractAddress)
-    transferFnSignature := []byte("transfer(address,uint256)")
-    hash := sha3.NewLegacyKeccak256()
-    hash.Write(transferFnSignature)
-    methodID := hash.Sum(nil)[:4]
-
-    paddedAddress := common.LeftPadBytes(toAddress.Bytes(), 32)
-    pIntAmount := big.NewInt(int64(amount))
-    paddedAmount := common.LeftPadBytes(pIntAmount.Bytes(), 32)
-
-    var data []byte
-    data = append(data, methodID...)
-    data = append(data, paddedAddress...)
-    data = append(data, paddedAmount...)
-
-    tx := types.NewTransaction(nonce, tokenAddress, value, gasLimit, gasPrice, data)*/
     tx := c.CreateSendTokenTransaction(token, fromAccount, toAccount, amount)
     signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, fromAccount.privateKey)
     if err != nil {
