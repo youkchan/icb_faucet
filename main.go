@@ -1,10 +1,6 @@
 package main
 
 import (
-	"github.com/joho/godotenv"
-	ethereum "github.com/youkchan/icb_faucet/pkg/ethereum"
-	db "github.com/youkchan/icb_faucet/pkg/firebase"
-	ipaddr "github.com/youkchan/icb_faucet/pkg/ipaddr"
 	"html/template"
 	"log"
 	"net/http"
@@ -12,6 +8,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/joho/godotenv"
+	ethereum "github.com/youkchan/icb_faucet/pkg/ethereum"
+	db "github.com/youkchan/icb_faucet/pkg/firebase"
+	ipaddr "github.com/youkchan/icb_faucet/pkg/ipaddr"
 )
 
 // Params passing to template
