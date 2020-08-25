@@ -9,5 +9,6 @@ require (
 	github.com/joho/godotenv v1.3.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
+	golang.org/x/tools v0.0.0-20200823205832-c024452afbcd // indirect
 	google.golang.org/api v0.30.0
 )
